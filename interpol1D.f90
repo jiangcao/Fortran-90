@@ -25,15 +25,17 @@ module interpol1D
             real(dp) :: p1(2),p2(2),dl(2),p(2)
             integer  :: ind(2)
             if ( (y<ymin) .or. (y>ymax) ) then 
+                x = 0.0_dp 
                 print *, "y out of range"
-                call abort 
-            endif 
-            ind = find_neighbor (y, n=1, lst=dataset(:,2))
-            p1 = dataset(ind(1),:)
-            p2 = dataset(ind(2),:)
-            dl = p2 - p1
-            p  = dl / dl(2) * (y-p1(2)) + p1
-            x  = p(1)
+                call abort
+            else 
+                ind = find_neighbor (y, n=1, lst=dataset(:,2))
+                p1 = dataset(ind(1),:)
+                p2 = dataset(ind(2),:)
+                dl = p2 - p1
+                p  = dl / dl(2) * (y-p1(2)) + p1
+                x  = p(1)
+            endif
         end function interpol_lin_gy
 
         function interpol_lin_fx(x) result(y)
@@ -43,17 +45,19 @@ module interpol1D
             real(dp) :: p1(2),p2(2),dl(2),p(2)
             integer  :: ind(2)
             if ( (x<xmin) .or. (x>xmax) ) then 
+                y = 0.0_dp
                 print *, "x out of range"
-                call abort 
-            endif 
-            ind = find_neighbor (x, n=1, lst=dataset(:,1))
-            p1 = dataset(ind(1),:)
-            p2 = dataset(ind(2),:)
-            dl = p2 - p1
-            p  = dl / dl(1) * (x-p1(1)) + p1
-            y  = p(2)
+                call abort
+            else
+                ind = find_neighbor (x, n=1, lst=dataset(:,1))
+                p1 = dataset(ind(1),:)
+                p2 = dataset(ind(2),:)
+                dl = p2 - p1
+                p  = dl / dl(1) * (x-p1(1)) + p1
+                y  = p(2)
+            endif
         end function interpol_lin_fx
-      
+
 
         ! function returns the indices of the neighbor points in the data list 
         function find_neighbor(x,n,lst) result(ind)
@@ -121,6 +125,8 @@ module interpol1D
             xmax = maxval(dataset(:,1)) 
             ymin = minval(dataset(:,2)) 
             ymax = maxval(dataset(:,2)) 
+            print *, "~~~~~"
+            print *, dataset
         end subroutine interpol_set
 
 

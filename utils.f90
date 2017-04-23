@@ -7,6 +7,7 @@ module utils
     private
 
     public seq, seqi
+    public cbind, rbind
     
     contains
 
@@ -25,6 +26,21 @@ module utils
             s(i) = xmin + (xmax - xmin ) / dble(n) * dble(i)
         enddo
     end function seq
+
+    function cbind(x,y) result(m)
+        real(dp), intent(in) :: x(:),y(:)
+        real(dp) :: m(size(x),2)
+        m(:,1) = x(:)
+        m(:,2) = y(:)
+    end function cbind
+
+    function rbind(x,y) result(m)
+        real(dp), intent(in) :: x(:),y(:)
+        real(dp) :: m(2,size(x))
+        m(1,:) = x(:)
+        m(2,:) = y(:)
+    end function rbind
+
 
 
 
