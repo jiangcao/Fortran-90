@@ -7,12 +7,22 @@ module input
     private
 
     public input_2c
+    public input_nc
 
     contains
 
         subroutine input_2c(fn, dataset)
             implicit none
             character(len=*), intent(in) :: fn
+            real(dp), allocatable, intent(out) :: dataset(:,:)
+            call input_nc(fn, 2, dataset)
+        end subroutine input_2c
+
+
+        subroutine input_nc(fn, ncol, dataset)
+            implicit none
+            character(len=*), intent(in) :: fn
+            integer, intent(in) :: ncol
             real(dp), allocatable, intent(out) :: dataset(:,:)
             integer :: u, i, n, err
             character(len=1000) :: line
@@ -26,12 +36,12 @@ module input
             enddo
             n = n-1
             rewind(u)
-            allocate(dataset(n, 2))
+            allocate(dataset(n, ncol))
             do i = 1,n
-                read(u, *) dataset(i,1), dataset(i,2)
+                read(u, *) dataset(i,:)
             enddo
             close(u)
-        end subroutine input_2c
+        end subroutine input_nc
 
 
 
