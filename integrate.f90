@@ -1,6 +1,7 @@
 module integrate
 ! Module to calculate numerically the integral of a function
 
+    use types, only : dp, rfn
 
     implicit none
 
@@ -16,16 +17,11 @@ module integrate
         ! - `f` the function to integrate
         ! - `x`   the integration interval
         ! - `by` the integration step
-        real(8) function int_1D(f, x, by) 
-            real(8), intent(in) :: x(2), by
-            real(8) :: dx
+        real(dp) function int_1D(f, x, by) 
+            real(dp), intent(in) :: x(2), by
+            real(dp) :: dx
             integer :: i, n
-            interface
-                real(8) function func(x)
-                    real(8), intent(in) :: x 
-                end function func
-            end interface
-            procedure(func)               :: f 
+            procedure(rfn)               :: f 
             int_1D = 0d0
             n = abs(x(2) - x(1))/by
             if (x(2) > x(1)) then
