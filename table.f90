@@ -117,9 +117,12 @@ integer :: i, err,nl,j,k
 !-----------------------------------------------------------------------------------------
 open(unit=handle,file=fname)
 nl = 0
+print *, "show the file.."
 ! How many lines in the file
 do  
 	read(handle,'(A)',IOSTAT=err) line
+
+print *, nl, trim(line)
 	! End of the File
 	if (err < 0) EXIT
 	! End of the table
@@ -151,7 +154,7 @@ do i = 1,tab%Nmat
 		numstr = get(subs,j+1)
 		k = index(numstr,'[')
         if (k .ne. 0) numstr = trim(numstr(1:k-1))
-		read(numstr,'(E)') tab%prop(j,i)
+		read(numstr,*) tab%prop(j,i)
 	enddo
 	print '(A5,100E12.3)',tab%matName(i),tab%prop(:,i)
 enddo
