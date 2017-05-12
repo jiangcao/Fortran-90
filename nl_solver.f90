@@ -1,5 +1,6 @@
 module nl_solver
 ! Module to solve the non-linear equations
+    use progressbar
     use types, only: dp
     use D, only : D_1D
 
@@ -11,7 +12,6 @@ module nl_solver
 
     public  nlsolver_bisec_1D, nlsolver_newton_1D
     public  nlsolver_linsearch_1D
-    public  nlsolver_df_test, nlsolver_f_test
 
 
     contains
@@ -83,7 +83,8 @@ module nl_solver
 
 
         logical function nlsolver_linsearch_1D(f,xmin,xmax, y, by,x)
-            real(dp), intent(in)  :: xmin,xmax,by
+            real(dp), intent(in)  :: xmin,by
+            real(dp), intent(in), optional :: xmax
             real(dp), intent(out) :: x(2)
             real(dp), intent(in)  :: y
             interface
@@ -93,11 +94,16 @@ module nl_solver
                 end function func
             end interface
             procedure(func) :: f 
-            real(dp) :: x1 
+            real(dp) :: x1 , nlxmax
             logical, parameter :: debug=.false.
             x1=xmin
+            if (present(xmax)) then 
+                nlxmax = xmax
+            else
+                nlxmax = HUGE(1.0_dp)
+            endif
             nlsolver_linsearch_1D = .false.
-            do while ((x1 < xmax ) .and. (.not. nlsolver_linsearch_1D))
+            do while ((x1 < nlxmax ) .and. (.not. nlsolver_linsearch_1D))
                 if ( ((f(x1)-y)*(f(x1+by)-y) <= 0d0) .or.(abs(f(x1)-y)<abs_tol) .or.(abs(f(x1+by)-y)<abs_tol) ) then 
                     nlsolver_linsearch_1D = .true.
                     x = (/x1, x1+by/)
@@ -115,7 +121,7 @@ module nl_solver
         ! - `f` is the 1D function 
         ! - 'x(1)' and 'x(2)' are the bondaries of the bisection
         ! - `info` is an optional parameter for indicating the error 
-        function nlsolver_bisec_1D(f,xrange,info, y,abstol) result(x0)
+        function nlsolver_bisec_1D(f,xrange,info, y,abstol,bar) result(x0)
             real(dp), intent(in) :: xrange(2) 
             real(dp), intent(in) :: y
             real(dp), intent(in), optional :: abstol
@@ -127,7 +133,10 @@ module nl_solver
             end interface
             procedure(func) :: f 
             integer, intent(out), optional :: info
+            logical, intent(in), optional  :: bar
             real(dp) :: x0,x(2)
+            real(dp) :: fm,fx(2)
+            real(dp) :: labstol
             integer :: j,i
             logical, parameter :: debug= .true.
             logical :: fin
@@ -135,57 +144,46 @@ module nl_solver
             x = xrange
             j = 0
             fin = .false.
+            labstol = merge(abstol, abs_tol, present(abstol))
+            if (present(bar) .and. bar) print *,"<<<< bisection >>>>" 
+            if (present(bar) .and. bar) call set_progress_bar()
+            fx(1) = f(x(1))
+            fx(2) = f(x(2))
             do while ((j<nmax) .and. (.not. fin))
                 do i = 1,2
-                    if( present(abstol) ) then
-                        if (abs(f(x(i))-y) < abstol) then 
-                            x0 = x(i)
-                            if (present(info)) info = 0
-                            fin=.true.
-                        endif
-                    else
-                        if (abs(f(x(i))-y) < abs_tol) then 
-                            x0 = x(i)
-                            if (present(info)) info = 0
-                            fin=.true.
-                        endif
+                    if (abs(fx(i)-y) < labstol) then 
+                        x0 = x(i)
+                        if (present(info)) info = 0
+                        fin=.true.
                     endif
                 enddo
-                if ((.not. fin) .and. ((f(x(1))-y)*(f(x(2))-y) > 0d0)) then 
+                if ((fx(1)-y)*(fx(2)-y) > 0d0) then 
                     if (present(info)) info = -1
-                    print *, "<<<< IN nlsolver_bisec_1D >>>>"
+                    print *, "<<<< IN nlsolver_bisec_1D: xrange too small or too big >>>>"
                     print *, "level = ",j 
                     print *, "x   = ", x 
-                    print *, "f-y = ", f(x(1))-y,f(x(2))-y 
+                    print *, "f-y = ", fx(1)-y,fx(2)-y 
                     call abort
                 else
-                    if ((f(sum(x)/2d0)-y) * (f(x(1))-y) <= 0d0) then
+                    fm = f(sum(x)/2d0)
+                    if ((fm-y) * (fx(1)-y) <= 0d0) then
                         x = (/ x(1), sum(x)/2d0 /)                   
+                        fx(2) = fm
                     else
+                        fx(1) = fm
                         x = (/ sum(x)/2d0, x(2) /)
                     endif
                 endif       
                 j = j+1
+                if (present(bar) .and. bar) call progress_bar(min(1.0_dp,labstol/abs(fm-y)))
             enddo
             if ((.not. fin) .and. present(info)) info = -2
             if (.not. fin) then 
-                print *, "<<<< IN nlsolver_bisec_1D >>>>"
-                print *, "level = ",j 
+                print *, "<<<< IN nlsolver_bisec_1D: still not fully converge >>>>"
                 print *, "x   = ", x 
-                print *, "f-y = ", f(x(1))-y,f(x(2))-y 
-                call abort
+                print *, "f-y = ", fx(1)-y,fx(2)-y 
+                x0 = sum(x)/2.0_dp
             endif
         end function nlsolver_bisec_1D
-
-
-real(dp) function nlsolver_f_test(x)
-    real(dp), intent(in) :: x
-    nlsolver_f_test = x**2-x - 1d0
-end function nlsolver_f_test
-
-real(dp) function nlsolver_df_test(x)
-    real(dp), intent(in) :: x
-    nlsolver_df_test = D_1D(nlsolver_f_test,x) 
-end function nlsolver_df_test
 
 end module nl_solver
