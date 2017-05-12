@@ -2,6 +2,7 @@ module interpol1D
 ! module to interpolate a function from a data set
 
     use types, only : dp
+    use output
 
     implicit none
 
@@ -9,13 +10,64 @@ module interpol1D
 
     real(dp),save, allocatable :: dataset(:,:)
     real(dp),save :: xmin, xmax, ymin, ymax 
-    integer  :: np
+    integer  :: np=0
 
     public interpol_set, find_insert, find_neighbor
     public interpol_lin_gy, interpol_lin_fx
     public interpol_freedata
+    public interpol_getNP, interpol_getrange,interpol_writedata
+    public interpol_adddatapoint
     
     contains
+
+        subroutine interpol_adddatapoint(x,y,point)
+            real(dp), optional, intent(in) :: x,y,point(2)
+            real(dp), allocatable :: tmpds(:,:)
+            if (present(x) .and. present(y)) then
+                np = np+1
+                allocate(tmpds(np,2))
+                if (np>1) then
+                    tmpds(1:np-1,:) = dataset
+                    deallocate(dataset)
+                endif
+                tmpds(np,:) = (/x,y/)
+                call move_alloc(tmpds, dataset)
+            else if (present(point)) then
+                np = np+1
+                allocate(tmpds(np,2))
+                if (np>1) then
+                    tmpds(1:np-1,:) = dataset
+                    deallocate(dataset)
+                endif
+                tmpds(np,:) = point 
+                call move_alloc(tmpds, dataset)
+            else
+                print *,"error, missing data"
+                call abort
+            endif
+            xmin = minval(dataset(:,1))
+            xmax = maxval(dataset(:,1))
+            ymin = minval(dataset(:,2))
+            ymax = maxval(dataset(:,2))
+        end subroutine interpol_adddatapoint
+
+
+        function interpol_getNP() result(getnp)
+            integer :: getnp
+            getnp = np
+        end function interpol_getNP
+
+        function interpol_getrange() result(reg)
+            real(dp) :: reg(4)
+            reg = (/xmin, xmax, ymin, ymax/)
+        end function interpol_getrange
+
+
+        subroutine interpol_writedata(fn)
+            implicit none
+            character(len=*) , intent(in) :: fn
+            call output_2c(fn, dataset)
+        end subroutine interpol_writedata
 
         ! linear interpolation from the two neighbor points 
         function interpol_lin_gy(y) result(x)
@@ -44,7 +96,7 @@ module interpol1D
             real(dp) :: y
             real(dp) :: p1(2),p2(2),dl(2),p(2)
             integer  :: ind(2)
-            if ( (x<xmin) .or. (x>xmax) ) then 
+            if ( (x<xmin-TINY(0.0_dp)) .or. (x>xmax+TINY(0.0_dp)) ) then 
                 y = 0.0_dp
                 print *, "x out of range"
                 call abort
@@ -125,8 +177,6 @@ module interpol1D
             xmax = maxval(dataset(:,1)) 
             ymin = minval(dataset(:,2)) 
             ymax = maxval(dataset(:,2)) 
-            print *, "~~~~~"
-            print *, dataset
         end subroutine interpol_set
 
 
