@@ -1,6 +1,6 @@
 module D
 ! Module to calculate the derivative numerically    
-    use types, only : rfn, dp
+    use types, only : dp
 
     implicit none
 
@@ -28,10 +28,16 @@ module D
         ! which can be a bottleneck of the performance if the function is difficult to evaluate.
         function D_1D(f,x,info) result(df)
             implicit none
+            interface
+                real(dp) function func(x)
+                    import
+                    real(dp), intent(in) :: x 
+                end function func
+            end interface
             real(dp)                       :: Df
             real(dp),intent(in)            :: x
-            integer,intent(out), optional  :: info
-            procedure(rfn)                 :: f 
+            integer,intent(out), optional :: info
+            procedure(func)               :: f 
             real(dp) :: dx
             real(dp) :: error
             real(dp) :: dfxnew, dfx

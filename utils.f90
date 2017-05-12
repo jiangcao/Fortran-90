@@ -10,6 +10,7 @@ module utils
     public cbind, rbind
     public cbind_3c
     public swap
+    public int2str, print_title
     
     contains
 
@@ -22,6 +23,11 @@ module utils
         b =c
     end subroutine swap
 
+    function int2str(n) result(s)
+        integer, intent(in) :: n
+        character(len=4) :: s
+        write(s, "(I0.4)") n
+    end function int2str
 
     real(dp) function seqi(i,xmin,xmax,n)
         integer, intent(in)  :: n,i
@@ -35,7 +41,7 @@ module utils
         real(dp) :: s(n) 
         integer  :: i
         do i =1 , n
-            s(i) = xmin + (xmax - xmin ) / dble(n) * dble(i)
+            s(i) = xmin + (xmax - xmin ) / dble(n-1) * dble(i-1)
         enddo
     end function seq
 
@@ -76,6 +82,19 @@ module utils
         m(2,:) = y(:)
     end function rbind
 
+    subroutine print_title(title,uni)
+        character(len=*) , intent(in) :: title
+        integer, optional, intent(in) :: uni
+        if (present(uni)) then
+            write(uni,*) " "
+            write(uni,*) "==== ",trim(title)," ===="
+            write(uni,*) " "
+        else
+            write(*,*) " "
+            write(*,*) "==== ",trim(title)," ===="
+            write(*,*) " "
+        endif
+    end subroutine print_title
 
 
 end module utils
