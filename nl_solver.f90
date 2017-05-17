@@ -1,8 +1,9 @@
 module nl_solver
 ! Module to solve the non-linear equations
     use progressbar
-    use types, only: dp
+    use types, only: rfn, rndfn, dp
     use D, only : D_1D
+    use mpi, only : idnode
 
     implicit none
     private
@@ -10,8 +11,9 @@ module nl_solver
     real(dp), parameter :: abs_tol = 1e-10
     real(dp), parameter :: rel_tol = 1e-10
 
-    public  nlsolver_bisec_1D, nlsolver_newton_1D
+    public  nlsolver_bisec_1D,nlsolver_bisec_1Dg, nlsolver_newton_1D
     public  nlsolver_linsearch_1D
+    public  nlsolver_linsearch_1Dg
 
 
     contains
@@ -81,6 +83,28 @@ module nl_solver
             if (debug) print *, "<<<< End Newton  >>>>"
         end function nlsolver_newton_1D
 
+        logical function nlsolver_linsearch_1Dg(f,x0,ivar,xmin,xmax,y,by,x)
+            procedure(rndfn) :: f
+            real(dp), intent(in) :: x0(:)
+            integer, intent(in) :: ivar
+            real(dp), intent(in)  :: xmin,by
+            real(dp), intent(in), optional :: xmax
+            real(dp), intent(out) :: x(2)
+            real(dp), intent(in)  :: y
+
+            nlsolver_linsearch_1Dg = nlsolver_linsearch_1D(f1, xmin, xmax, y, by, x)
+            
+        contains
+            
+            real(dp) function f1(x)
+                real(dp),intent(in) :: x
+                real(dp) :: xp(size(x0))
+                xp = x0
+                xp(ivar) = x
+                f1 = f(xp)
+            end function f1
+        end function nlsolver_linsearch_1Dg
+
 
         logical function nlsolver_linsearch_1D(f,xmin,xmax, y, by,x)
             real(dp), intent(in)  :: xmin,by
@@ -114,6 +138,28 @@ module nl_solver
         end function nlsolver_linsearch_1D
 
 
+        function nlsolver_bisec_1Dg(f, x, ivar, xrange, y, abstol, bar,info) result(x0)
+            real(dp), intent(in) :: xrange(2) 
+            real(dp), intent(in) :: x(:)
+            integer, intent(in) :: ivar
+            integer, intent(out), optional :: info
+            real(dp), intent(in) :: y
+            real(dp), intent(in), optional :: abstol
+            procedure(rndfn) :: f 
+            logical, intent(in), optional  :: bar
+            real(dp) :: x0
+
+            x0 = nlsolver_bisec_1D(f1,xrange=xrange, y=y,abstol=abstol,bar=bar, info=info)
+
+        contains
+            real(dp) function f1(xi)
+                real(dp),intent(in) :: xi
+                real(dp) :: xp(size(x))
+                xp = x
+                xp(ivar) = xi
+                f1 = f(xp)
+            end function f1
+        end function nlsolver_bisec_1Dg
 
 
         ! Bisection method to find the root of a non-linear 1D function f(x)=y in a defined interval
@@ -125,13 +171,7 @@ module nl_solver
             real(dp), intent(in) :: xrange(2) 
             real(dp), intent(in) :: y
             real(dp), intent(in), optional :: abstol
-            interface
-                real(dp) function func(x)
-                    import
-                    real(dp), intent(in) :: x 
-                end function func
-            end interface
-            procedure(func) :: f 
+            procedure(rfn) :: f 
             integer, intent(out), optional :: info
             logical, intent(in), optional  :: bar
             real(dp) :: x0,x(2)
@@ -157,25 +197,28 @@ module nl_solver
                         fin=.true.
                     endif
                 enddo
-                if ((fx(1)-y)*(fx(2)-y) > 0d0) then 
-                    if (present(info)) info = -1
-                    print *, "<<<< IN nlsolver_bisec_1D: xrange too small or too big >>>>"
-                    print *, "level = ",j 
-                    print *, "x   = ", x 
-                    print *, "f-y = ", fx(1)-y,fx(2)-y 
-                    call abort
-                else
-                    fm = f(sum(x)/2d0)
-                    if ((fm-y) * (fx(1)-y) <= 0d0) then
-                        x = (/ x(1), sum(x)/2d0 /)                   
-                        fx(2) = fm
+                if (.not. fin) then
+                    if ((fx(1)-y)*(fx(2)-y) > 0d0) then 
+                        if (present(info)) info = -1
+                        print *, "<<<< IN nlsolver_bisec_1D: xrange too small or too big >>>>"
+                        print *, "level = ",j 
+                        print *, "x   = ", x 
+                        print *, "f-y = ", fx(1)-y,fx(2)-y 
+                        print *, idnode
+                        call abort
                     else
-                        fx(1) = fm
-                        x = (/ sum(x)/2d0, x(2) /)
-                    endif
-                endif       
-                j = j+1
-                if (present(bar) .and. bar) call progress_bar(min(1.0_dp,labstol/abs(fm-y)))
+                        fm = f(sum(x)/2d0)
+                        if ((fm-y) * (fx(1)-y) <= 0d0) then
+                            x = (/ x(1), sum(x)/2d0 /)                   
+                            fx(2) = fm
+                        else
+                            fx(1) = fm
+                            x = (/ sum(x)/2d0, x(2) /)
+                        endif
+                    endif       
+                    j = j+1
+                endif
+                if (present(bar) .and. bar) call progress_bar(min(1.0_dp,labstol/minval(abs(fx-y))))
             enddo
             if ((.not. fin) .and. present(info)) info = -2
             if (.not. fin) then 
@@ -186,4 +229,4 @@ module nl_solver
             endif
         end function nlsolver_bisec_1D
 
-end module nl_solver
+    end module nl_solver
