@@ -40,9 +40,13 @@ module utils
         real(dp), intent(in) :: xmin,xmax
         real(dp) :: s(n) 
         integer  :: i
-        do i =1 , n
-            s(i) = xmin + (xmax - xmin ) / dble(n-1) * dble(i-1)
-        enddo
+        if (n == 1) then
+            s(:) = (xmin+xmax)/2.0_dp
+        else
+            do i =1 , n
+                s(i) = xmin + (xmax - xmin ) / dble(n-1) * dble(i-1)
+            enddo
+        endif
     end function seq
 
     ! Function returns the Cartesian coordinates from the Polar coordinates
