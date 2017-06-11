@@ -125,16 +125,16 @@ module interpol1D
             xnp(1:n) = -HUGE(1.0_dp)
             xnp(n+1:2*n) =  HUGE(1.0_dp)
             do i = 1, nx
-                if ( (lst(i) <= x ) .and. (lst(i) > xnp(1)) ) then 
+                if ( (lst(i) <= x ) .and. (lst(i) > xnp(1)) ) then                     
                     m = find_insert(lst(i), lst=xnp(1:n)) 
                     xnp(1:m-1) = xnp(2:m)
                     xnp(m) = lst(i)
                     npi(1:m-1) = npi(2:m)
                     npi(m) = i
                 endif
-                if ( (lst(i) > x) .and. (lst(i) < xnp(2*n))) then 
+                if ( (lst(i) > x) .and. (lst(i) < xnp(2*n))) then                     
                     m = find_insert(lst(i), lst=xnp(n+1:2*n)) 
-                    m = m+n
+                    m = m+n                    
                     xnp(m+2:2*n) = xnp(m+1:n*2-1)
                     xnp(m+1) = lst(i)
                     npi(m+2:2*n) = npi(m+1:n*2-1)
@@ -146,16 +146,22 @@ module interpol1D
  
 
         function find_insert(x, lst) result(ind)
-            implicit none
-            real(dp), intent(in) :: x , lst(:)
-            integer :: ind
-            integer :: i, nx
+        implicit none
+        real(dp), intent(in) :: x , lst(:)
+        integer :: ind
+        integer :: i, nx
+        logical :: fin 
             nx = size(lst)
-            i = 1
-            do while ( ( lst(i) < x ) .and. (i<= nx) )
-                i = i+1
-            enddo
-            ind = i-1
+            i = 0
+            fin = .false.
+            do while  ((i< nx) .and. (.not. fin) )            
+                if  ( lst(i+1) < x ) then
+                    i = i+1
+                else
+                    fin = .true.
+                endif                
+            enddo   
+            ind = i              
         end function find_insert
 
 
